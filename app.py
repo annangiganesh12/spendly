@@ -142,24 +142,30 @@ def profile():
     if not user_data:
         return redirect(url_for('logout'))
 
+    # Capture date filters from request args
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
     # Compute avatar initials from name
     name = user_data.get("name", "")
     initials = "".join([n[0].upper() for n in name.split() if n])[:2]
     user_data["avatar_initials"] = initials if initials else "U"
 
-    stats = get_summary_stats(user_id)
+    stats = get_summary_stats(user_id, start_date, end_date)
 
     # Fetch real transaction history
-    transactions = get_recent_transactions(user_id)
+    transactions = get_recent_transactions(user_id, start_date=start_date, end_date=end_date)
 
-    categories = get_category_breakdown(user_id)
+    categories = get_category_breakdown(user_id, start_date, end_date)
 
     return render_template(
         "profile.html",
         user=user_data,
         stats=stats,
         transactions=transactions,
-        categories=categories
+        categories=categories,
+        start_date=start_date,
+        end_date=end_date
     )
 
 
