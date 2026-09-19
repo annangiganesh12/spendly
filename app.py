@@ -1,10 +1,32 @@
-from flask import Flask, render_template, request, redirect, url_for
-from werkzeug.security import generate_password_hash
+from flask import Flask, render_template, request, redirect, url_for, session
+from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
+from functools import wraps
 from database.db import init_db, seed_db, get_db
 
 app = Flask(__name__)
+app.secret_key = 'dev-key-for-spendly'
 
+
+# ------------------------------------------------------------------ #
+# Helpers                                                                #
+# ------------------------------------------------------------------ #
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def redirect_if_logged_in(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' in session:
+            return redirect(url_for('landing'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # ------------------------------------------------------------------ #
 # Routes                                                              #
@@ -14,8 +36,13 @@ app = Flask(__name__)
 def landing():
     return render_template("landing.html")
 
+@app.context_processor
+def inject_user():
+    return dict(user_id=session.get('user_id'))
+
 
 @app.route("/register", methods=["GET", "POST"])
+@redirect_if_logged_in
 def register():
     if request.method == "POST":
         name = request.form.get("name")
@@ -43,8 +70,31 @@ def register():
     return render_template("register.html")
 
 
-@app.route("/login")
+@app.route("/login", methods=["GET", "POST"])
+@redirect_if_logged_in
 def login():
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+
+        if not email or not password:
+            return render_template("login.html", error="Email and password are required.")
+
+        try:
+            with get_db() as conn:
+                user = conn.execute(
+                    "SELECT id, password_hash FROM users WHERE email = ?",
+                    (email,)
+                ).fetchone()
+
+                if user and check_password_hash(user['password_hash'], password):
+                    session['user_id'] = user['id']
+                    return redirect(url_for("landing"))
+                else:
+                    return render_template("login.html", error="Invalid email or password.")
+        except Exception as e:
+            return render_template("login.html", error="An unexpected error occurred. Please try again.")
+
     return render_template("login.html")
 
 
@@ -64,10 +114,12 @@ def privacy():
 
 @app.route("/logout")
 def logout():
-    return "Logout — coming in Step 3"
+    session.clear()
+    return redirect(url_for("landing"))
 
 
 @app.route("/profile")
+@login_required
 def profile():
     return "Profile page — coming in Step 4"
 
