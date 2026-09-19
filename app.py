@@ -2,14 +2,16 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 from functools import wraps
+from database.queries import get_category_breakdown
 from database.db import init_db, seed_db, get_db
+from database.queries import get_summary_stats, get_user_by_id, get_recent_transactions
 
 app = Flask(__name__)
 app.secret_key = 'dev-key-for-spendly'
 
 
 # ------------------------------------------------------------------ #
-# Helpers                                                                #
+# Helpers                                                              #
 # ------------------------------------------------------------------ #
 
 def login_required(f):
@@ -41,6 +43,16 @@ def landing():
 @app.context_processor
 def inject_user():
     return dict(user_id=session.get('user_id'))
+
+
+@app.template_filter('format_currency')
+def format_currency(value):
+    try:
+        if value is None:
+            return "₹0.00"
+        return f"₹{float(value):,.2f}"
+    except (ValueError, TypeError):
+        return "₹0.00"
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -123,35 +135,24 @@ def logout():
 @app.route("/profile")
 @login_required
 def profile():
-    # Hardcoded data for Step 4 UI validation
-    user_data = {
-        "name": "Ganesh Anna",
-        "email": "ganesh@example.com",
-        "avatar_initials": "GA",
-        "member_since": "January 2024"
-    }
+    # Fetch real user data
+    user_id = session['user_id']
+    user_data = get_user_by_id(user_id)
 
-    stats = {
-        "total_spent": "₹12,450.00",
-        "transaction_count": 24,
-        "top_category": "Food & Dining"
-    }
+    if not user_data:
+        return redirect(url_for('logout'))
 
-    transactions = [
-        {"date": "2024-09-18", "description": "Starbucks Coffee", "category": "Food & Dining", "amount": "₹350.00"},
-        {"date": "2024-09-17", "description": "Uber Ride", "category": "Transport", "amount": "₹210.00"},
-        {"date": "2024-09-15", "description": "Amazon - Keyboard", "category": "Electronics", "amount": "₹2,499.00"},
-        {"date": "2024-09-12", "description": "Grocery Store", "category": "Groceries", "amount": "₹1,200.00"},
-        {"date": "2024-09-10", "description": "Netflix Subscription", "category": "Entertainment", "amount": "₹499.00"},
-    ]
+    # Compute avatar initials from name
+    name = user_data.get("name", "")
+    initials = "".join([n[0].upper() for n in name.split() if n])[:2]
+    user_data["avatar_initials"] = initials if initials else "U"
 
-    categories = [
-        {"name": "Food & Dining", "amount": "₹4,200.00", "percentage": 34, "color": "var(--accent)"},
-        {"name": "Transport", "amount": "₹2,100.00", "percentage": 17, "color": "var(--accent-2)"},
-        {"name": "Electronics", "amount": "₹3,500.00", "percentage": 28, "color": "#5b7fa6"},
-        {"name": "Entertainment", "amount": "₹1,500.00", "percentage": 12, "color": "#8b5e83"},
-        {"name": "Others", "amount": "₹1,150.00", "percentage": 9, "color": "var(--ink-muted)"},
-    ]
+    stats = get_summary_stats(user_id)
+
+    # Fetch real transaction history
+    transactions = get_recent_transactions(user_id)
+
+    categories = get_category_breakdown(user_id)
 
     return render_template(
         "profile.html",
