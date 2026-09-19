@@ -230,7 +230,7 @@
         <section class="stats-grid">
             <div class="stat-tile">
                 <span class="stat-label">Total Spent</span>
-                <span class="stat-value">{{ stats.total_spent }}</span>
+                <span class="stat-value">{{ stats.total_spent | format_currency }}</span>
             </div>
             <div class="stat-tile">
                 <span class="stat-label">Transactions</span>
@@ -255,15 +255,23 @@
                             <th style="text-align: right;">Amount</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for tx in transactions %}
-                        <tr>
-                            <td>{{ tx.date }}</td>
-                            <td>{{ tx.description }}</td>
-                            <td><span class="cat-badge">{{ tx.category }}</span></td>
-                            <td class="amt-cell">{{ tx.amount }}</td>
-                        </tr>
-                        {% endfor %}
+                    <tbody id="transaction-body">
+                        {% if transactions %}
+                            {% for tx in transactions %}
+                            <tr>
+                                <td>{{ tx.date }}</td>
+                                <td>{{ tx.description }}</td>
+                                <td><span class="cat-badge">{{ tx.category }}</span></td>
+                                <td class="amt-cell">{{ tx.amount | format_currency }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: var(--ink-muted); padding: 2rem;">
+                                    No transactions found. Start adding expenses to see your history!
+                                </td>
+                            </tr>
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
@@ -273,15 +281,21 @@
         <section>
             <h2 class="section-title">Spending Breakdown</h2>
             <div class="breakdown-card">
-                {% for cat in categories %}
-                <div class="category-row">
-                    <span class="cat-name">{{ cat.name }}</span>
-                    <div class="bar-track">
-                        <div class="bar-fill" style="width: {{ cat.percentage }}%; background: {{ cat.color }};"></div>
+                {% if categories %}
+                    {% for cat in categories %}
+                    <div class="category-row">
+                        <span class="cat-name">{{ cat.name }}</span>
+                        <div class="bar-track">
+                            <div class="bar-fill" style="width: {{ cat.percentage }}%; background: {{ cat.color }};"></div>
+                        </div>
+                        <span class="cat-amount">{{ cat.amount | format_currency }}</span>
                     </div>
-                    <span class="cat-amount">{{ cat.amount }}</span>
-                </div>
-                {% endfor %}
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align: center; color: var(--ink-muted); padding: 2rem;">
+                        No spending data available. Start adding expenses to see your breakdown!
+                    </div>
+                {% endif %}
             </div>
         </section>
     </div>
