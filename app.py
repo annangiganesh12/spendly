@@ -24,7 +24,7 @@ def redirect_if_logged_in(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' in session:
-            return redirect(url_for('landing'))
+            return redirect(url_for('profile'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -34,6 +34,8 @@ def redirect_if_logged_in(f):
 
 @app.route("/")
 def landing():
+    if 'user_id' in session:
+        return redirect(url_for('profile'))
     return render_template("landing.html")
 
 @app.context_processor
@@ -89,7 +91,7 @@ def login():
 
                 if user and check_password_hash(user['password_hash'], password):
                     session['user_id'] = user['id']
-                    return redirect(url_for("landing"))
+                    return redirect(url_for("profile"))
                 else:
                     return render_template("login.html", error="Invalid email or password.")
         except Exception as e:
@@ -121,7 +123,43 @@ def logout():
 @app.route("/profile")
 @login_required
 def profile():
-    return "Profile page — coming in Step 4"
+    # Hardcoded data for Step 4 UI validation
+    user_data = {
+        "name": "Ganesh Anna",
+        "email": "ganesh@example.com",
+        "avatar_initials": "GA",
+        "member_since": "January 2024"
+    }
+
+    stats = {
+        "total_spent": "₹12,450.00",
+        "transaction_count": 24,
+        "top_category": "Food & Dining"
+    }
+
+    transactions = [
+        {"date": "2024-09-18", "description": "Starbucks Coffee", "category": "Food & Dining", "amount": "₹350.00"},
+        {"date": "2024-09-17", "description": "Uber Ride", "category": "Transport", "amount": "₹210.00"},
+        {"date": "2024-09-15", "description": "Amazon - Keyboard", "category": "Electronics", "amount": "₹2,499.00"},
+        {"date": "2024-09-12", "description": "Grocery Store", "category": "Groceries", "amount": "₹1,200.00"},
+        {"date": "2024-09-10", "description": "Netflix Subscription", "category": "Entertainment", "amount": "₹499.00"},
+    ]
+
+    categories = [
+        {"name": "Food & Dining", "amount": "₹4,200.00", "percentage": 34, "color": "var(--accent)"},
+        {"name": "Transport", "amount": "₹2,100.00", "percentage": 17, "color": "var(--accent-2)"},
+        {"name": "Electronics", "amount": "₹3,500.00", "percentage": 28, "color": "#5b7fa6"},
+        {"name": "Entertainment", "amount": "₹1,500.00", "percentage": 12, "color": "#8b5e83"},
+        {"name": "Others", "amount": "₹1,150.00", "percentage": 9, "color": "var(--ink-muted)"},
+    ]
+
+    return render_template(
+        "profile.html",
+        user=user_data,
+        stats=stats,
+        transactions=transactions,
+        categories=categories
+    )
 
 
 @app.route("/expenses/add")
