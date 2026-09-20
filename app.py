@@ -2,12 +2,16 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 from functools import wraps
+from datetime import date
 from database.queries import get_category_breakdown
+
 from database.db import init_db, seed_db, get_db
 from database.queries import get_summary_stats, get_user_by_id, get_recent_transactions
 
 app = Flask(__name__)
 app.secret_key = 'dev-key-for-spendly'
+
+CATEGORIES = ['Food', 'Transport', 'Bills', 'Health', 'Entertainment', 'Shopping', 'Other']
 
 
 # ------------------------------------------------------------------ #
@@ -169,9 +173,42 @@ def profile():
     )
 
 
-@app.route("/expenses/add")
+@app.route("/expenses/add", methods=["GET", "POST"])
+@login_required
 def add_expense():
-    return "Add expense — coming in Step 7"
+    if request.method == "POST":
+        amount = request.form.get("amount")
+        category = request.form.get("category")
+        date_val = request.form.get("date")
+        description = request.form.get("description")
+        user_id = session.get("user_id")
+
+        if not amount or not category or not date_val:
+            return render_template("add_expense.html", error="Amount, category, and date are required.", categories=CATEGORIES, default_date=date.today().isoformat())
+
+        try:
+            amount_float = float(amount)
+            if amount_float <= 0:
+                return render_template("add_expense.html", error="Amount must be a positive number.", categories=CATEGORIES, default_date=date.today().isoformat())
+        except ValueError:
+            return render_template("add_expense.html", error="Invalid amount entered.", categories=CATEGORIES, default_date=date.today().isoformat())
+
+        if category not in CATEGORIES:
+            return render_template("add_expense.html", error="Invalid category selected.", categories=CATEGORIES, default_date=date.today().isoformat())
+
+        try:
+            with get_db() as conn:
+                conn.execute(
+                    "INSERT INTO expenses (user_id, amount, category, date, description) VALUES (?, ?, ?, ?, ?)",
+                    (user_id, amount_float, category, date_val, description)
+                )
+                conn.commit()
+            return redirect(url_for("profile"))
+        except Exception as e:
+            return render_template("add_expense.html", error="An error occurred while saving the expense. Please try again.", categories=CATEGORIES, default_date=date.today().isoformat())
+
+    return render_template("add_expense.html", categories=CATEGORIES, default_date=date.today().isoformat())
+
 
 
 @app.route("/expenses/<int:id>/edit")
