@@ -259,9 +259,29 @@ def edit_expense(id):
     return render_template("edit_expense.html", expense=expense, categories=CATEGORIES, default_date=date.today().isoformat())
 
 
-@app.route("/expenses/<int:id>/delete")
+@app.route("/expenses/<int:id>/delete", methods=["POST"])
+@login_required
 def delete_expense(id):
-    return "Delete expense — coming in Step 9"
+    user_id = session.get("user_id")
+
+    with get_db() as conn:
+        # Ownership Verification
+        expense = conn.execute(
+            "SELECT id FROM expenses WHERE id = ? AND user_id = ?",
+            (id, user_id)
+        ).fetchone()
+
+        if not expense:
+            abort(404)
+
+        # Parameterized Deletion
+        conn.execute(
+            "DELETE FROM expenses WHERE id = ? AND user_id = ?",
+            (id, user_id)
+        )
+        conn.commit()
+
+    return redirect(url_for("profile"))
 
 
 if __name__ == "__main__":
