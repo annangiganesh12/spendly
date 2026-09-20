@@ -137,7 +137,7 @@ def get_category_breakdown(user_id, start_date=None, end_date=None):
 def get_recent_transactions(user_id, limit=10, start_date=None, end_date=None):
     """Fetches the most recent transactions for a user."""
     with get_db() as conn:
-        query = "SELECT date, description, category, amount FROM expenses WHERE user_id = ?"
+        query = "SELECT id, date, description, category, amount FROM expenses WHERE user_id = ?"
         params = [user_id]
 
         if start_date:

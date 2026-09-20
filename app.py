@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, abort
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 from functools import wraps
@@ -211,9 +211,52 @@ def add_expense():
 
 
 
-@app.route("/expenses/<int:id>/edit")
+@app.route("/expenses/<int:id>/edit", methods=["GET", "POST"])
+@login_required
 def edit_expense(id):
-    return "Edit expense — coming in Step 8"
+    user_id = session.get("user_id")
+
+    # Fetch the expense and verify ownership
+    with get_db() as conn:
+        expense = conn.execute(
+            "SELECT * FROM expenses WHERE id = ? AND user_id = ?",
+            (id, user_id)
+        ).fetchone()
+
+    if not expense:
+        abort(404)
+
+    if request.method == "POST":
+        amount = request.form.get("amount")
+        category = request.form.get("category")
+        date_val = request.form.get("date")
+        description = request.form.get("description")
+
+        if not amount or not category or not date_val:
+            return render_template("edit_expense.html", error="Amount, category, and date are required.", expense=expense, categories=CATEGORIES, default_date=date.today().isoformat())
+
+        try:
+            amount_float = float(amount)
+            if amount_float <= 0:
+                return render_template("edit_expense.html", error="Amount must be a positive number.", expense=expense, categories=CATEGORIES, default_date=date.today().isoformat())
+        except ValueError:
+            return render_template("edit_expense.html", error="Invalid amount entered.", expense=expense, categories=CATEGORIES, default_date=date.today().isoformat())
+
+        if category not in CATEGORIES:
+            return render_template("edit_expense.html", error="Invalid category selected.", expense=expense, categories=CATEGORIES, default_date=date.today().isoformat())
+
+        try:
+            with get_db() as conn:
+                conn.execute(
+                    "UPDATE expenses SET amount = ?, category = ?, date = ?, description = ? WHERE id = ? AND user_id = ?",
+                    (amount_float, category, date_val, description, id, user_id)
+                )
+                conn.commit()
+            return redirect(url_for("profile"))
+        except Exception as e:
+            return render_template("edit_expense.html", error="An error occurred while updating the expense. Please try again.", expense=expense, categories=CATEGORIES, default_date=date.today().isoformat())
+
+    return render_template("edit_expense.html", expense=expense, categories=CATEGORIES, default_date=date.today().isoformat())
 
 
 @app.route("/expenses/<int:id>/delete")
