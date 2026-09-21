@@ -278,6 +278,7 @@
         <div class="avatar-circle">{{ user.avatar_initials }}</div>
         <h1 class="user-name">{{ user.name }}</h1>
         <p class="user-email">{{ user.email }}</p>
+        <a href="{{ url_for('add_expense') }}" class="btn-submit" style="display: block; text-align: center; text-decoration: none; margin-bottom: 1.5rem; padding: 0.8rem; border-radius: var(--radius-md); font-weight: 500;">+ Add Expense</a>
         <div class="member-since">Member since {{ user.created_at }}</div>
     </aside>
 
@@ -350,7 +351,7 @@
                         {% else %}
                             <tr>
                                 <td colspan="5" style="text-align: center; color: var(--ink-muted); padding: 2rem;">
-                                    No transactions found. Start adding expenses to see your history!
+                                    No transactions found. <a href="{{ url_for('add_expense') }}" style="color: var(--accent); font-weight: 500; text-decoration: none;">Start adding expenses</a> to see your history!
                                 </td>
                             </tr>
                         {% endif %}
@@ -375,7 +376,7 @@
                     {% endfor %}
                 {% else %}
                     <div style="text-align: center; color: var(--ink-muted); padding: 2rem;">
-                        No spending data available. Start adding expenses to see your breakdown!
+                        No spending data available. <a href="{{ url_for('add_expense') }}" style="color: var(--accent); font-weight: 500; text-decoration: none;">Start adding expenses</a> to see your breakdown!
                     </div>
                 {% endif %}
             </div>
