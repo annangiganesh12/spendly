@@ -279,9 +279,3 @@ The app is a working foundation. The plan below describes how it can grow into a
 ### Quality
 - Expand test coverage to registration, login, add and delete flows, and the dashboard queries
 - Add integration and end-to-end tests, and test coverage reporting in CI
-
----
-
-## License
-
-Add your preferred license here (for example MIT).
